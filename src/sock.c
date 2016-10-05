@@ -77,7 +77,7 @@ bind_socket (int sockfd, const char *addr, int family)
  */
 int opensock (const char *host, int port, const char *bind_to)
 {
-        int sockfd, n;
+        int sockfd, n, v;
         struct addrinfo hints, *res, *ressave;
         char portstr[6];
 
@@ -110,14 +110,27 @@ int opensock (const char *host, int port, const char *bind_to)
                 if (sockfd < 0)
                         continue;       /* ignore this one */
 
+                v = 1;
+                n = setsockopt (sockfd, SOL_IP, IP_FREEBIND, &v, sizeof(v));
+                if (n < 0) {
+                        log_message (LOG_ERR,
+                                     "opensock: Failed to set IP_FREEBIND on socket");
+                }
+
                 /* Bind to the specified address */
                 if (bind_to) {
+                        log_message(LOG_INFO,
+                                    "opensock: attempting to bind to %s", bind_to);
+
                         if (bind_socket (sockfd, bind_to,
                                          res->ai_family) < 0) {
                                 close (sockfd);
                                 continue;       /* can't bind, so try again */
                         }
                 } else if (config.bind_address) {
+                        log_message(LOG_INFO,
+                                    "opensock: attempting to bind to %s", bind_to);
+
                         if (bind_socket (sockfd, config.bind_address,
                                          res->ai_family) < 0) {
                                 close (sockfd);
